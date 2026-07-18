@@ -361,7 +361,7 @@
     <div class="hero-stats">
       <div class="hero-stat">
         <span class="n" id="hero-ig-views30-n">15.2M</span>
-        <span class="l">IG Views · Live (30 Days)</span>
+        <span class="l">Post Views · Live (30 Days)</span>
       </div>
       <div class="stat-divider"></div>
       <div class="hero-stat">
@@ -419,19 +419,19 @@
   <div class="stat-highlight">
     <div>
       <div class="big-n" id="ig-highlight-views60-n">13.2M</div>
-      <div class="big-l">Views · Live (60 Days)</div>
+      <div class="big-l">Post Views · Live (60 Days)</div>
     </div>
-    <p>Reels, photos, and carousels — tracked live via Phyllo.</p>
+    <p>Total views on Reels, photos, and carousels published in this window — tracked live via Phyllo.</p>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card">
       <div class="big" id="ig-views30-n">7.6M</div>
-      <div class="desc">Views · Live (30 Days)</div>
+      <div class="desc">Post Views · Live (30 Days)</div>
     </div>
     <div class="stat-card">
       <div class="big" id="ig-views60-n">13.2M</div>
-      <div class="desc">Views · Live (60 Days)</div>
+      <div class="desc">Post Views · Live (60 Days)</div>
     </div>
     <div class="stat-card">
       <div class="big" id="ig-likes60-n">—</div>
@@ -480,27 +480,31 @@
 
 <!-- AUDIENCE -->
 <section class="audience">
-  <p class="eyebrow">Instagram Audience</p>
+  <p class="eyebrow">Instagram Audience · Live</p>
   <h2 class="section-title">A community<br>that converts.</h2>
   <div class="audience-grid">
     <div class="aud-block">
       <h3>Top Countries</h3>
-      <div class="aud-row"><span>Canada</span></div>
-      <div class="aud-row"><span>Belize</span></div>
-      <div class="aud-row"><span>United States</span></div>
-      <div class="aud-row"><span>United Kingdom</span></div>
-      <div class="aud-row"><span>India</span></div>
+      <div id="aud-countries">
+        <div class="aud-row"><span>Canada</span></div>
+        <div class="aud-row"><span>Belize</span></div>
+        <div class="aud-row"><span>United States</span></div>
+        <div class="aud-row"><span>United Kingdom</span></div>
+        <div class="aud-row"><span>India</span></div>
+      </div>
     </div>
     <div class="aud-block">
       <h3>Gender</h3>
-      <div class="gender-labels"><span>Women · 67%</span><span>Men · 33%</span></div>
-      <div class="gender-track"><div class="gender-fill" style="width:67%"></div></div>
+      <div class="gender-labels"><span id="gender-women-label">Women · 67%</span><span id="gender-men-label">Men · 33%</span></div>
+      <div class="gender-track"><div class="gender-fill" id="gender-fill" style="width:67%"></div></div>
       <h3 style="margin-top:28px;">Age</h3>
-      <div class="aud-row"><span>18 – 24</span><span class="aud-pct">13.8%</span></div>
-      <div class="aud-row"><span>25 – 34</span><span class="aud-pct">49.3%</span></div>
-      <div class="aud-row"><span>35 – 44</span><span class="aud-pct">19.7%</span></div>
-      <div class="aud-row"><span>45 – 54</span><span class="aud-pct">9.0%</span></div>
-      <div class="aud-row"><span>55+</span><span class="aud-pct">8.2%</span></div>
+      <div id="aud-ages">
+        <div class="aud-row"><span>18 – 24</span><span class="aud-pct" id="age-18-24">13.8%</span></div>
+        <div class="aud-row"><span>25 – 34</span><span class="aud-pct" id="age-25-34">49.3%</span></div>
+        <div class="aud-row"><span>35 – 44</span><span class="aud-pct" id="age-35-44">19.7%</span></div>
+        <div class="aud-row"><span>45 – 54</span><span class="aud-pct" id="age-45-54">9.0%</span></div>
+        <div class="aud-row"><span>55+</span><span class="aud-pct" id="age-55-plus">8.2%</span></div>
+      </div>
     </div>
   </div>
 </section>
@@ -687,6 +691,31 @@
             '<div class="reel-meta">' + metaParts.join(" · ") + '</div>' +
             '</div>';
         }).join("");
+      }
+
+      if (ig && ig.audience) {
+        var aud = ig.audience;
+        var countriesEl = document.getElementById("aud-countries");
+        if (countriesEl && Array.isArray(aud.top_countries) && aud.top_countries.length) {
+          countriesEl.innerHTML = aud.top_countries.map(function (c) {
+            return '<div class="aud-row"><span>' + escapeHtml(c) + '</span></div>';
+          }).join("");
+        }
+        var womenLabel = document.getElementById("gender-women-label");
+        var menLabel = document.getElementById("gender-men-label");
+        var genderFill = document.getElementById("gender-fill");
+        if (aud.women_pct != null && aud.men_pct != null) {
+          if (womenLabel) womenLabel.textContent = "Women · " + aud.women_pct + "%";
+          if (menLabel) menLabel.textContent = "Men · " + aud.men_pct + "%";
+          if (genderFill) genderFill.style.width = aud.women_pct + "%";
+        }
+        var ageIds = { "18-24": "age-18-24", "25-34": "age-25-34", "35-44": "age-35-44", "45-54": "age-45-54", "55+": "age-55-plus" };
+        if (aud.age_buckets) {
+          Object.keys(ageIds).forEach(function (key) {
+            var el = document.getElementById(ageIds[key]);
+            if (el && aud.age_buckets[key] != null) el.textContent = aud.age_buckets[key] + "%";
+          });
+        }
       }
 
       var liveNote = document.getElementById("live-updated");
