@@ -7,7 +7,6 @@
 const PHYLLO_BASE = process.env.PHYLLO_BASE_URL || "https://api.staging.getphyllo.com/v1";
 
 // Account IDs are not secret — safe to keep in code.
-// Add the TikTok account_id here once it's connected in Phyllo.
 const ACCOUNTS = [
   { platform: "instagram", account_id: "a7cd6b12-6fbc-4a96-8d47-f26faa094df5" },
   { platform: "tiktok", account_id: "33728051-f1fe-4cb0-94cf-21d55fc7d1de" },
@@ -30,6 +29,31 @@ exports.handler = async function () {
 
   const auth = Buffer.from(`${clientId}:${secret}`).toString("base64");
 
+  // Sums this account's video view/like counts over the last N days from
+  // Phyllo's content-level engagement data. This measures something
+  // narrower than a platform's own in-app analytics (e.g. it can't see
+  // replays/live views the way TikTok's own dashboard can), so it's kept
+  // as a separate, clearly-labeled "live" figure rather than overwriting
+  // official platform analytics.
+  async function recentContentTotals(account_id, days) {
+    const res = await fetch(
+      `${PHYLLO_BASE}/social/contents?account_id=${account_id}&limit=50`,
+      { headers: { Authorization: `Basic ${auth}` } }
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const items = json.data || [];
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const recent = items.filter(
+      (i) => i.published_at && new Date(i.published_at).getTime() >= cutoff
+    );
+    return {
+      views_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.view_count) || 0), 0),
+      likes_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.like_count) || 0), 0),
+      posts_60d: recent.length,
+    };
+  }
+
   const stats = await Promise.all(
     ACCOUNTS.map(async ({ platform, account_id }) => {
       try {
@@ -42,6 +66,16 @@ exports.handler = async function () {
         const json = await res.json();
         const profile = (json.data && json.data[0]) || {};
         const rep = profile.reputation || {};
+
+        let content60d = null;
+        if (platform === "tiktok") {
+          try {
+            content60d = await recentContentTotals(account_id, 60);
+          } catch (e) {
+            content60d = null;
+          }
+        }
+
         return {
           platform,
           username: profile.platform_username || null,
@@ -50,6 +84,8 @@ exports.handler = async function () {
           following: rep.following_count ?? null,
           posts: rep.content_count ?? null,
           avg_likes: rep.like_count ?? null,
+          views_60d: content60d ? content60d.views_60d : null,
+          likes_60d: content60d ? content60d.likes_60d : null,
         };
       } catch (err) {
         return { platform, account_id, error: String(err) };
