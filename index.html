@@ -510,12 +510,12 @@
       <div class="label">Video Views · Live (60 Days)</div>
     </div>
     <div class="tk-card">
-      <div class="big">165K</div>
-      <div class="label">Total Viewers · 60 Days</div>
+      <div class="big" id="tk-comments-n">—</div>
+      <div class="label">Video Comments · Live (60 Days)</div>
     </div>
     <div class="tk-card">
-      <div class="big">82.8%</div>
-      <div class="label">For You Page Traffic</div>
+      <div class="big" id="tk-shares-n">—</div>
+      <div class="label">Video Shares · Live (60 Days)</div>
     </div>
     <div class="tk-card">
       <div class="big" id="tk-followers-n">3.1K</div>
@@ -526,11 +526,11 @@
       <div class="label">Video Likes · Live (60 Days)</div>
     </div>
     <div class="tk-card">
-      <div class="big">143K</div>
-      <div class="label">New Viewers · 60 Days</div>
+      <div class="big" id="tk-posts60-n">—</div>
+      <div class="label">Videos Posted · Live (60 Days)</div>
     </div>
   </div>
-  <p class="tk-note">82.8% of TikTok views come from the For You Page. Top audiences: Canada, Belize, United States.</p>
+  <p class="tk-note">Top audiences: Canada, Belize, United States.</p>
 </section>
 
 <!-- COLLABS -->
@@ -629,6 +629,9 @@
       var tkFollowers = document.getElementById("tk-followers-n");
       var tkViews = document.getElementById("tk-views-n");
       var tkLikes = document.getElementById("tk-likes-n");
+      var tkComments = document.getElementById("tk-comments-n");
+      var tkShares = document.getElementById("tk-shares-n");
+      var tkPosts60 = document.getElementById("tk-posts60-n");
       if (ig && ig.followers != null && igN) igN.textContent = fmt(ig.followers);
       if (tt && tt.followers != null) {
         if (ttN) ttN.textContent = fmt(tt.followers);
@@ -636,6 +639,9 @@
       }
       if (tt && tt.views_60d != null && tkViews) tkViews.textContent = fmt(tt.views_60d);
       if (tt && tt.likes_60d != null && tkLikes) tkLikes.textContent = fmt(tt.likes_60d);
+      if (tt && tt.comments_60d != null && tkComments) tkComments.textContent = fmt(tt.comments_60d);
+      if (tt && tt.shares_60d != null && tkShares) tkShares.textContent = fmt(tt.shares_60d);
+      if (tt && tt.posts_60d != null && tkPosts60) tkPosts60.textContent = String(tt.posts_60d);
       var liveNote = document.getElementById("live-updated");
       if (liveNote) {
         var t = new Date(data.updated_at || Date.now());
