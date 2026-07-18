@@ -506,8 +506,8 @@
   <h2 class="section-title">A second platform,<br>the same momentum.</h2>
   <div class="tk-grid">
     <div class="tk-card">
-      <div class="big">299K</div>
-      <div class="label">Post Views · 60 Days</div>
+      <div class="big" id="tk-views-n">299K</div>
+      <div class="label">Video Views · Live (60 Days)</div>
     </div>
     <div class="tk-card">
       <div class="big">165K</div>
@@ -522,8 +522,8 @@
       <div class="label">Followers</div>
     </div>
     <div class="tk-card">
-      <div class="big">23.9K</div>
-      <div class="label">Likes · 60 Days</div>
+      <div class="big" id="tk-likes-n">23.9K</div>
+      <div class="label">Video Likes · Live (60 Days)</div>
     </div>
     <div class="tk-card">
       <div class="big">143K</div>
@@ -627,11 +627,15 @@
       var igN = document.getElementById("hero-ig-n");
       var ttN = document.getElementById("hero-tt-n");
       var tkFollowers = document.getElementById("tk-followers-n");
+      var tkViews = document.getElementById("tk-views-n");
+      var tkLikes = document.getElementById("tk-likes-n");
       if (ig && ig.followers != null && igN) igN.textContent = fmt(ig.followers);
       if (tt && tt.followers != null) {
         if (ttN) ttN.textContent = fmt(tt.followers);
         if (tkFollowers) tkFollowers.textContent = fmt(tt.followers);
       }
+      if (tt && tt.views_60d != null && tkViews) tkViews.textContent = fmt(tt.views_60d);
+      if (tt && tt.likes_60d != null && tkLikes) tkLikes.textContent = fmt(tt.likes_60d);
       var liveNote = document.getElementById("live-updated");
       if (liveNote) {
         var t = new Date(data.updated_at || Date.now());
