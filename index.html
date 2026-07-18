@@ -81,7 +81,7 @@
     margin-bottom: 48px; opacity: 0.8;
     max-width: 320px;
   }
-  .hero-stats { display: flex; gap: 28px; }
+  .hero-stats { display: flex; gap: 28px; flex-wrap: wrap; row-gap: 20px; }
   .hero-stat { display: flex; flex-direction: column; gap: 4px; }
   .hero-stat .n {
     font-family: 'Cormorant Garamond', serif;
@@ -373,6 +373,11 @@
         <span class="n" id="hero-tt-n">3.1K</span>
         <span class="l">TikTok</span>
       </div>
+      <div class="stat-divider"></div>
+      <div class="hero-stat">
+        <span class="n" id="hero-total-n">8.4K</span>
+        <span class="l">Total Followers</span>
+      </div>
     </div>
   </div>
 </section>
@@ -413,28 +418,28 @@
 
   <div class="stat-highlight">
     <div>
-      <div class="big-n">13.2M</div>
-      <div class="big-l">Views · 60 Days</div>
+      <div class="big-n" id="ig-highlight-views60-n">13.2M</div>
+      <div class="big-l">Views · Live (60 Days)</div>
     </div>
-    <p>6.8 million unique accounts reached in 60 days. 95% of all views from people who had never found this account before.</p>
+    <p>Reels, photos, and carousels — tracked live via Phyllo.</p>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="big">7.6M</div>
-      <div class="desc">Views · 30 Days</div>
+      <div class="big" id="ig-views30-n">7.6M</div>
+      <div class="desc">Views · Live (30 Days)</div>
     </div>
     <div class="stat-card">
-      <div class="big">13.2M</div>
-      <div class="desc">Views · 60 Days</div>
+      <div class="big" id="ig-views60-n">13.2M</div>
+      <div class="desc">Views · Live (60 Days)</div>
     </div>
     <div class="stat-card">
-      <div class="big">6.8M</div>
-      <div class="desc">Accounts Reached · 60 Days</div>
+      <div class="big" id="ig-likes60-n">—</div>
+      <div class="desc">Post Likes · Live (60 Days)</div>
     </div>
     <div class="stat-card">
-      <div class="big">95%</div>
-      <div class="desc">Non-Follower View Rate</div>
+      <div class="big" id="ig-comments60-n">—</div>
+      <div class="desc">Post Comments · Live (60 Days)</div>
     </div>
   </div>
 
@@ -626,6 +631,7 @@
       var tt = stats.find(function (s) { return s.platform === "tiktok"; });
       var igN = document.getElementById("hero-ig-n");
       var ttN = document.getElementById("hero-tt-n");
+      var totalN = document.getElementById("hero-total-n");
       var tkFollowers = document.getElementById("tk-followers-n");
       var tkViews = document.getElementById("tk-views-n");
       var tkLikes = document.getElementById("tk-likes-n");
@@ -637,11 +643,28 @@
         if (ttN) ttN.textContent = fmt(tt.followers);
         if (tkFollowers) tkFollowers.textContent = fmt(tt.followers);
       }
+      if (totalN && ig && ig.followers != null && tt && tt.followers != null) {
+        totalN.textContent = fmt(ig.followers + tt.followers);
+      }
       if (tt && tt.views_60d != null && tkViews) tkViews.textContent = fmt(tt.views_60d);
       if (tt && tt.likes_60d != null && tkLikes) tkLikes.textContent = fmt(tt.likes_60d);
       if (tt && tt.comments_60d != null && tkComments) tkComments.textContent = fmt(tt.comments_60d);
       if (tt && tt.shares_60d != null && tkShares) tkShares.textContent = fmt(tt.shares_60d);
       if (tt && tt.posts_60d != null && tkPosts60) tkPosts60.textContent = String(tt.posts_60d);
+
+      var igViews30 = document.getElementById("ig-views30-n");
+      var igViews60 = document.getElementById("ig-views60-n");
+      var igHighlight60 = document.getElementById("ig-highlight-views60-n");
+      var igLikes60 = document.getElementById("ig-likes60-n");
+      var igComments60 = document.getElementById("ig-comments60-n");
+      if (ig && ig.views_30d != null && igViews30) igViews30.textContent = fmt(ig.views_30d);
+      if (ig && ig.views_60d != null) {
+        if (igViews60) igViews60.textContent = fmt(ig.views_60d);
+        if (igHighlight60) igHighlight60.textContent = fmt(ig.views_60d);
+      }
+      if (ig && ig.likes_60d != null && igLikes60) igLikes60.textContent = fmt(ig.likes_60d);
+      if (ig && ig.comments_60d != null && igComments60) igComments60.textContent = fmt(ig.comments_60d);
+
       var liveNote = document.getElementById("live-updated");
       if (liveNote) {
         var t = new Date(data.updated_at || Date.now());
