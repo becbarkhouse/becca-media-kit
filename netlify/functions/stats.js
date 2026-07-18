@@ -50,6 +50,8 @@ exports.handler = async function () {
     return {
       views_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.view_count) || 0), 0),
       likes_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.like_count) || 0), 0),
+      comments_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.comment_count) || 0), 0),
+      shares_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.share_count) || 0), 0),
       posts_60d: recent.length,
     };
   }
@@ -86,6 +88,9 @@ exports.handler = async function () {
           avg_likes: rep.like_count ?? null,
           views_60d: content60d ? content60d.views_60d : null,
           likes_60d: content60d ? content60d.likes_60d : null,
+          comments_60d: content60d ? content60d.comments_60d : null,
+          shares_60d: content60d ? content60d.shares_60d : null,
+          posts_60d: content60d ? content60d.posts_60d : null,
         };
       } catch (err) {
         return { platform, account_id, error: String(err) };
