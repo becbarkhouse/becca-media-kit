@@ -360,8 +360,8 @@
     <p class="hero-tagline">Coastal living, emotional storytelling, and a community that converts.</p>
     <div class="hero-stats">
       <div class="hero-stat">
-        <span class="n">15.2M</span>
-        <span class="l">IG Views · 90 Days</span>
+        <span class="n" id="hero-ig-views30-n">15.2M</span>
+        <span class="l">IG Views · Live (30 Days)</span>
       </div>
       <div class="stat-divider"></div>
       <div class="hero-stat">
@@ -443,8 +443,8 @@
     </div>
   </div>
 
-  <p class="reels-label">Top Performing Reels</p>
-  <div class="reels-grid">
+  <p class="reels-label">Top Performing Reels · Live (90 Days)</p>
+  <div class="reels-grid" id="reels-grid">
     <div class="reel-card">
       <div class="reel-views">3.7M</div>
       <div class="reel-title">"Just thank you for being you"</div>
@@ -620,6 +620,11 @@
     if (n >= 1000) return (n / 1000).toFixed(1) + "K";
     return String(n);
   }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
   fetch("/api/stats", { cache: "no-store" })
     .then(function (res) {
       if (!res.ok) throw new Error("bad status");
@@ -653,17 +658,36 @@
       if (tt && tt.posts_60d != null && tkPosts60) tkPosts60.textContent = String(tt.posts_60d);
 
       var igViews30 = document.getElementById("ig-views30-n");
+      var heroIgViews30 = document.getElementById("hero-ig-views30-n");
       var igViews60 = document.getElementById("ig-views60-n");
       var igHighlight60 = document.getElementById("ig-highlight-views60-n");
       var igLikes60 = document.getElementById("ig-likes60-n");
       var igComments60 = document.getElementById("ig-comments60-n");
-      if (ig && ig.views_30d != null && igViews30) igViews30.textContent = fmt(ig.views_30d);
+      if (ig && ig.views_30d != null) {
+        if (igViews30) igViews30.textContent = fmt(ig.views_30d);
+        if (heroIgViews30) heroIgViews30.textContent = fmt(ig.views_30d);
+      }
       if (ig && ig.views_60d != null) {
         if (igViews60) igViews60.textContent = fmt(ig.views_60d);
         if (igHighlight60) igHighlight60.textContent = fmt(ig.views_60d);
       }
       if (ig && ig.likes_60d != null && igLikes60) igLikes60.textContent = fmt(ig.likes_60d);
       if (ig && ig.comments_60d != null && igComments60) igComments60.textContent = fmt(ig.comments_60d);
+
+      var reelsGrid = document.getElementById("reels-grid");
+      if (reelsGrid && ig && Array.isArray(ig.top_reels) && ig.top_reels.length) {
+        reelsGrid.innerHTML = ig.top_reels.map(function (r) {
+          var title = r.title ? '"' + escapeHtml(r.title) + '"' : "Reel";
+          var metaParts = [];
+          if (r.reach != null) metaParts.push(fmt(r.reach) + " Reach");
+          if (r.interactions != null) metaParts.push(fmt(r.interactions) + " Interactions");
+          return '<div class="reel-card">' +
+            '<div class="reel-views">' + fmt(r.views) + '</div>' +
+            '<div class="reel-title">' + title + '</div>' +
+            '<div class="reel-meta">' + metaParts.join(" · ") + '</div>' +
+            '</div>';
+        }).join("");
+      }
 
       var liveNote = document.getElementById("live-updated");
       if (liveNote) {
