@@ -57,6 +57,10 @@ exports.handler = async function () {
   // platform's engagement product hasn't finished syncing yet, or on any
   // API error — callers treat an empty list as "not available yet" and
   // leave static fallback numbers in place rather than showing zeroes.
+  // TEMP DIAGNOSTIC: also returns `debug` info (first page's HTTP status /
+  // error / raw item count) so we can see why an account is coming back
+  // empty. Remove the debug plumbing once the TikTok content issue is
+  // root-caused.
   async function fetchContentSince(account_id, days) {
     const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -64,23 +68,36 @@ exports.handler = async function () {
     const pageSize = 100;
     const maxPages = 20; // safety cap: up to 2,000 items, well beyond any realistic 90-day volume
     let all = [];
+    const debug = { fromDate, pages: [] };
     try {
       for (let page = 0; page < maxPages; page++) {
         const offset = page * pageSize;
-        const res = await fetch(
-          `${PHYLLO_BASE}/social/contents?account_id=${account_id}&limit=${pageSize}&offset=${offset}&from_date=${fromDate}`,
-          { headers: { Authorization: `Basic ${auth}` } }
-        );
-        if (!res.ok) break;
+        const url = `${PHYLLO_BASE}/social/contents?account_id=${account_id}&limit=${pageSize}&offset=${offset}&from_date=${fromDate}`;
+        const res = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+        if (!res.ok) {
+          let bodyText = "";
+          try { bodyText = (await res.text()).slice(0, 300); } catch (e2) {}
+          debug.pages.push({ page, status: res.status, ok: false, body: bodyText });
+          break;
+        }
         const json = await res.json();
         const batch = json.data || [];
+        debug.pages.push({ page, status: res.status, ok: true, batchLen: batch.length, totalInResponse: json.metadata?.total_count });
         all = all.concat(batch);
         if (batch.length < pageSize) break; // reached the last page
       }
     } catch (e) {
-      // Return whatever was fetched before the error rather than nothing.
+      debug.error = String(e);
     }
-    return all;
+    debug.finalCount = all.length;
+    if (all.length > 0) {
+      debug.sampleItem = {
+        type: all[0].type,
+        published_at: all[0].published_at,
+        engagement: all[0].engagement,
+      };
+    }
+    return { items: all, debug };
   }
 
   // Sums view/like/comment/share counts for items published within the
@@ -207,7 +224,7 @@ exports.handler = async function () {
         const profile = (json.data && json.data[0]) || {};
         const rep = profile.reputation || {};
 
-        const items = await fetchContentSince(account_id, 90);
+        const { items, debug: contentDebug } = await fetchContentSince(account_id, 90);
         const has60d = items.length > 0;
         const w60 = has60d ? sumWindow(items, 60) : null;
         const w30 = has60d ? sumWindow(items, 30) : null;
@@ -231,6 +248,7 @@ exports.handler = async function () {
           posts_60d: w60 ? w60.posts : null,
           top_reels: platform === "instagram" && has60d ? topReels(items, 90, 6) : null,
           audience,
+          _debug: !has60d ? contentDebug : undefined,
         };
       } catch (err) {
         return { platform, account_id, error: String(err) };
