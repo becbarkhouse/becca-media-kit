@@ -69,6 +69,37 @@ exports.handler = async function () {
     };
   }
 
+  // Picks the top-viewed Reels published within the last `days` days.
+  // Uses Phyllo's `type` field (e.g. "REELS" vs "STORY") to exclude
+  // Stories, which otherwise pollute a "top performing" ranking.
+  function topReels(items, days, count) {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const reels = items.filter(
+      (i) =>
+        i.type === "REELS" &&
+        i.published_at &&
+        new Date(i.published_at).getTime() >= cutoff
+    );
+    reels.sort(
+      (a, b) => ((b.engagement && b.engagement.view_count) || 0) - ((a.engagement && a.engagement.view_count) || 0)
+    );
+    return reels.slice(0, count).map((r) => {
+      const e = r.engagement || {};
+      const interactions = (e.like_count || 0) + (e.comment_count || 0) + (e.share_count || 0);
+      const rawTitle = (r.title || r.description || "").replace(/\s+/g, " ").trim();
+      const title = rawTitle.length > 70 ? rawTitle.slice(0, 67) + "..." : rawTitle;
+      return {
+        views: e.view_count ?? null,
+        reach: e.reach_organic_count ?? null,
+        likes: e.like_count ?? null,
+        comments: e.comment_count ?? null,
+        shares: e.share_count ?? null,
+        interactions,
+        title,
+      };
+    });
+  }
+
   const stats = await Promise.all(
     ACCOUNTS.map(async ({ platform, account_id }) => {
       try {
@@ -101,6 +132,7 @@ exports.handler = async function () {
           comments_60d: w60 ? w60.comments : null,
           shares_60d: w60 ? w60.shares : null,
           posts_60d: w60 ? w60.posts : null,
+          top_reels: platform === "instagram" && has60d ? topReels(items, 90, 6) : null,
         };
       } catch (err) {
         return { platform, account_id, error: String(err) };
