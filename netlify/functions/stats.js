@@ -29,30 +29,43 @@ exports.handler = async function () {
 
   const auth = Buffer.from(`${clientId}:${secret}`).toString("base64");
 
-  // Sums this account's video view/like counts over the last N days from
-  // Phyllo's content-level engagement data. This measures something
-  // narrower than a platform's own in-app analytics (e.g. it can't see
-  // replays/live views the way TikTok's own dashboard can), so it's kept
-  // as a separate, clearly-labeled "live" figure rather than overwriting
-  // official platform analytics.
-  async function recentContentTotals(account_id, days) {
-    const res = await fetch(
-      `${PHYLLO_BASE}/social/contents?account_id=${account_id}&limit=50`,
-      { headers: { Authorization: `Basic ${auth}` } }
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    const items = json.data || [];
+  // Fetches an account's recent content items (posts/videos) with their
+  // engagement counts. Returns [] if the platform's engagement product
+  // hasn't finished syncing yet in Phyllo, or on any API error — callers
+  // treat an empty list as "not available yet" and leave static fallback
+  // numbers in place rather than showing zeroes.
+  async function fetchRecentContent(account_id) {
+    try {
+      const res = await fetch(
+        `${PHYLLO_BASE}/social/contents?account_id=${account_id}&limit=100`,
+        { headers: { Authorization: `Basic ${auth}` } }
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.data || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Sums view/like/comment/share counts for items published within the
+  // last `days` days. This is a direct sum of Phyllo's per-post data —
+  // it measures something narrower than a platform's own in-app
+  // analytics (e.g. it can't see replays/unique-reach the way the
+  // platform's own dashboard can), so it's kept as a separate,
+  // clearly-labeled "live" figure rather than overwriting official
+  // platform analytics.
+  function sumWindow(items, days) {
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const recent = items.filter(
       (i) => i.published_at && new Date(i.published_at).getTime() >= cutoff
     );
     return {
-      views_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.view_count) || 0), 0),
-      likes_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.like_count) || 0), 0),
-      comments_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.comment_count) || 0), 0),
-      shares_60d: recent.reduce((s, i) => s + ((i.engagement && i.engagement.share_count) || 0), 0),
-      posts_60d: recent.length,
+      views: recent.reduce((s, i) => s + ((i.engagement && i.engagement.view_count) || 0), 0),
+      likes: recent.reduce((s, i) => s + ((i.engagement && i.engagement.like_count) || 0), 0),
+      comments: recent.reduce((s, i) => s + ((i.engagement && i.engagement.comment_count) || 0), 0),
+      shares: recent.reduce((s, i) => s + ((i.engagement && i.engagement.share_count) || 0), 0),
+      posts: recent.length,
     };
   }
 
@@ -69,14 +82,10 @@ exports.handler = async function () {
         const profile = (json.data && json.data[0]) || {};
         const rep = profile.reputation || {};
 
-        let content60d = null;
-        if (platform === "tiktok") {
-          try {
-            content60d = await recentContentTotals(account_id, 60);
-          } catch (e) {
-            content60d = null;
-          }
-        }
+        const items = await fetchRecentContent(account_id);
+        const has60d = items.length > 0;
+        const w60 = has60d ? sumWindow(items, 60) : null;
+        const w30 = has60d ? sumWindow(items, 30) : null;
 
         return {
           platform,
@@ -86,11 +95,12 @@ exports.handler = async function () {
           following: rep.following_count ?? null,
           posts: rep.content_count ?? null,
           avg_likes: rep.like_count ?? null,
-          views_60d: content60d ? content60d.views_60d : null,
-          likes_60d: content60d ? content60d.likes_60d : null,
-          comments_60d: content60d ? content60d.comments_60d : null,
-          shares_60d: content60d ? content60d.shares_60d : null,
-          posts_60d: content60d ? content60d.posts_60d : null,
+          views_30d: w30 ? w30.views : null,
+          views_60d: w60 ? w60.views : null,
+          likes_60d: w60 ? w60.likes : null,
+          comments_60d: w60 ? w60.comments : null,
+          shares_60d: w60 ? w60.shares : null,
+          posts_60d: w60 ? w60.posts : null,
         };
       } catch (err) {
         return { platform, account_id, error: String(err) };
